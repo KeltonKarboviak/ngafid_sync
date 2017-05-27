@@ -83,12 +83,20 @@ def get_pending_files(dbx_obj, org, org_is_UND):
     else:
         list_folder_path = '/' + PENDING_FOLDER
 
+    entries = []
     try:
-        res = dbx_obj.files_list_folder(list_folder_path, recursive=True)
-        return res.entries
+        result = dbx_obj.files_list_folder(list_folder_path, recursive=True)
+        entries.extend(result.entries)
+
+        # Dropbox API can only give so many results at a time, so we need
+        # to continually call the API until there are no more results
+        while result.has_more:
+            result = dbx_obj.files_list_folder_continue(result.cursor)
+            entries.extend(result.entries)
     except dropbox.exceptions.ApiError, e:
         logging.exception("[%s] Error while calling Dropbox.files_list_folder: %s", org, e)
-        return []  # If exception is thrown, then return an empty list
+
+    return entries
 # end def get_pending_files()
 
 
