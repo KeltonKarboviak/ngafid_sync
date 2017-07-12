@@ -13,10 +13,11 @@ from threading import Thread
 logging.basicConfig(
     filename='logs/' + time.strftime('%Y_%m_%d') + '.log',
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(thread)d - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logging.getLogger('dropbox').setLevel(logging.CRITICAL)
 logging.getLogger('requests').setLevel(logging.CRITICAL)
+logging.getLogger('urllib3').setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 SERVER_PREFIX = "/fdm"
@@ -65,7 +66,7 @@ class MoveWorker(Thread):
 
             try:
                 logging.info("MoveWorker: from [%-50s] to [%-50s]", from_path, to_path)
-                dbx_obj.files_move(from_path, to_path)
+                dbx_obj.files_move(from_path, to_path, autorename=True)
             except dropbox.exceptions.ApiError, e:
                 logging.exception("Error in MoveWorker: %s", e)
             finally:
