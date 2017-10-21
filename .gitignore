@@ -1,9 +1,7 @@
 
 dbx_config.py
-dbx_org_sync_data.json
+dbx_org_tokens.json
 logs/
-
-
 
 # Created by https://www.gitignore.io/api/python
 
