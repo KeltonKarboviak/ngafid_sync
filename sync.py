@@ -211,8 +211,8 @@ def main():
 
                 # Check to see if entry is a directory just above flight CSV
                 # files. If so, then we'll see if the path exists on the server
-                if (org_is_UND and len(dbx_path_list) == 4) or \
-                        (not org_is_UND and len(dbx_path_list) == 3):
+                if (org_is_UND and len(dbx_path_list) == 4) or (
+                        not org_is_UND and len(dbx_path_list) == 3):
                     if org_is_UND:
                         org, status, aircraft, n_number = dbx_path_list
                     else:
@@ -258,7 +258,7 @@ def stopwatch(msg):
         t1 = time.time()
 
     logging.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
-    slack_log_msg('Elapsed time for ' + msg, str(t1-t0))
+    slack_log_msg('Elapsed time for ' + msg, str(t1 - t0))
 
 
 def init_globals():
