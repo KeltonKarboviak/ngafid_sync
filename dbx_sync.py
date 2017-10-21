@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
 import contextlib
-import dropbox
 import json
 import logging
 import os
 import time
 from Queue import Queue
 from threading import Thread
+
+import dropbox
+from dotenv import load_dotenv
+from slackweb import Slack
 
 
 logging.basicConfig(
@@ -20,9 +23,11 @@ logging.getLogger('requests').setLevel(logging.CRITICAL)
 logging.getLogger('urllib3').setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
-SERVER_PREFIX = "/fdm"
-PENDING_FOLDER = "UploadPending"
-COMPLETE_FOLDER = "UploadComplete"
+SERVER_PREFIX = ''
+PENDING_FOLDER = 'UploadPending'
+COMPLETE_FOLDER = 'UploadComplete'
+
+slack = None
 
 
 class DownloadWorker(Thread):
@@ -30,34 +35,33 @@ class DownloadWorker(Thread):
         Thread.__init__(self)
         self.download_queue = d_queue
         self.move_queue = m_queue
-    # end def __init__()
 
     def run(self):
         while True:
             # Get a download link from the queue
-            dbx_obj, server_path, move_from_path, move_to_path = self.download_queue.get()
+            dbx_obj, server_path, move_from_path, move_to_path = \
+                self.download_queue.get()
 
             try:
-                logging.info("DownloadWorker: saving [%-50s] to [%-50s]", move_from_path, server_path)
+                logging.info(
+                    "DownloadWorker: saving [%-50s] to [%-50s]",
+                    move_from_path,
+                    server_path
+                )
                 dbx_obj.files_download_to_file(server_path, move_from_path)
 
                 # Put the paths for moving after a successful download
-                self.move_queue.put( (dbx_obj, move_from_path, move_to_path) )
-                # move_list.append( dropbox.files.RelocationPath(move_from_path, move_to_path) )
+                self.move_queue.put((dbx_obj, move_from_path, move_to_path))
             except dropbox.exceptions.ApiError, e:
                 logging.exception("Error in DownloadWorker: %s", e)
             finally:
                 self.download_queue.task_done()
-        # end while
-    # end def run()
-# end class DownloadWorker
 
 
 class MoveWorker(Thread):
     def __init__(self, queue):
         Thread.__init__(self)
         self.queue = queue
-    # end def __init__()
 
     def run(self):
         while True:
@@ -65,20 +69,21 @@ class MoveWorker(Thread):
             dbx_obj, from_path, to_path = self.queue.get()
 
             try:
-                logging.info("MoveWorker: from [%-50s] to [%-50s]", from_path, to_path)
+                logging.info(
+                    "MoveWorker: from [%-50s] to [%-50s]",
+                    from_path,
+                    to_path
+                )
                 dbx_obj.files_move(from_path, to_path, autorename=True)
             except dropbox.exceptions.ApiError, e:
                 logging.exception("Error in MoveWorker: %s", e)
             finally:
                 self.queue.task_done()
-        # end while
-    # end def run()
-# end class MoveWorker
 
 
 def get_pending_files(dbx_obj, org, org_is_UND):
     if org_is_UND:
-        # UND's dropbox has 2 separate sub-locations: UND-GFK, UND-IWA
+        # UND's dropbox has 3 separate sub-locations: UND-GFK, UND-IWA, UND-CKN
         # these are a special case
         list_folder_path = '/'.join(["", org, PENDING_FOLDER])
     else:
@@ -95,34 +100,40 @@ def get_pending_files(dbx_obj, org, org_is_UND):
             result = dbx_obj.files_list_folder_continue(result.cursor)
             entries.extend(result.entries)
     except dropbox.exceptions.ApiError, e:
-        logging.exception("[%s] Error while calling Dropbox.files_list_folder: %s", org, e)
+        logging.exception(
+            "[%s] Error while calling Dropbox.files_list_folder: %s",
+            org,
+            e
+        )
 
     return entries
-# end def get_pending_files()
 
 
 def main():
-    download_queue = Queue()  # Create a queue to communicate with DownloadWorker threads
-    move_queue = Queue()  # Create a queue to communicate with MoveWorker threads
+    # Create a queue to communicate with DownloadWorker threads
+    download_queue = Queue()
 
-    for x in range(1):  # Create 1 thread(s) for downloading
+    # Create a queue to communicate with MoveWorker threads
+    move_queue = Queue()
+
+    for x in range(1):  # Create thread(s) for downloading
         download_worker = DownloadWorker(download_queue, move_queue)
         download_worker.daemon = True
         download_worker.start()
 
-    for x in range(4):  # Create 4 thread(s) for moving
+    for x in range(4):  # Create thread(s) for moving
         move_worker = MoveWorker(move_queue)
         move_worker.daemon = True
         move_worker.start()
 
     # Read in all organizations' Dropbox tokens
-    with open('dbx_org_sync_data.json', 'r') as in_json_datafile:
-        org_data = json.load(in_json_datafile)
+    with open('dbx_org_tokens.json', 'r') as json_infile:
+        org_data = json.load(json_infile)
 
     for org, token in org_data.items():
-        dbx = dropbox.Dropbox(token)  # USE FOR PROD
+        dbx = dropbox.Dropbox(token)
 
-        org_is_UND = org in ["UND-GFK", "UND-IWA"]
+        org_is_UND = org in ['UND-GFK', 'UND-IWA', 'UND-CKN']
 
         entries = get_pending_files(dbx, org, org_is_UND)
         file_count = 0
@@ -132,41 +143,75 @@ def main():
                 file_count += 1
 
                 if org_is_UND:
-                    # UND's dropbox has 2 separate sub-locations: UND-GFK, UND-IWA
-                    # these are a special case
-                    org, status, aircraft, n_number, flight_file = entry.path_lower.strip('/').split('/')
+                    # UND's dropbox has 3 separate sub-locations: UND-GFK,
+                    # UND-IWA, UND-CKN these are a special case
+                    org, status, aircraft, n_number, flight_file = \
+                        entry.path_lower.strip('/').split('/')
                     org = org.upper()
 
                     # Get the path for moving the file on Dropbox
-                    move_to_path = '/'.join(["", org, COMPLETE_FOLDER, aircraft, n_number, flight_file])
+                    move_to_path = '/'.join([
+                        "",
+                        org,
+                        COMPLETE_FOLDER,
+                        aircraft,
+                        n_number,
+                        flight_file
+                    ])
                 else:
-                    status, aircraft, n_number, flight_file = entry.path_lower.strip('/').split('/')
+                    status, aircraft, n_number, flight_file = \
+                        entry.path_lower.strip('/').split('/')
 
                     # Get the path for moving the file on Dropbox
-                    move_to_path = '/'.join(["", COMPLETE_FOLDER, aircraft, n_number, flight_file])
+                    move_to_path = '/'.join([
+                        "",
+                        COMPLETE_FOLDER,
+                        aircraft,
+                        n_number,
+                        flight_file
+                    ])
 
                 aircraft, n_number = aircraft.upper(), n_number.upper()
 
                 # Get the path on the server for downloading
-                server_path = os.path.join(SERVER_PREFIX, org, aircraft, n_number, flight_file)
+                server_path = os.path.join(
+                    SERVER_PREFIX,
+                    org,
+                    aircraft,
+                    n_number,
+                    flight_file
+                )
 
                 if not os.path.exists(server_path):
                     # Put a download path into download_queue as a tuple since
                     # it doesn't exist, DownloadWorker thread will download file
                     # from Dropbox to server
-                    logging.info("%-25s [%-11s]: %s", "File does not exist", "queueing", server_path)
-                    download_queue.put( (dbx, server_path, entry.path_lower, move_to_path) )
+                    logging.info(
+                        "%-25s [%-11s]: %s",
+                        "File does not exist",
+                        "queueing",
+                        server_path
+                    )
+                    download_queue.put(
+                        (dbx, server_path, entry.path_lower, move_to_path)
+                    )
                 else:
                     # File already exists, so put in move_queue and have
-                    # MoveWorker thread to move to COMPLETE_FOLDER
-                    logging.info("%-25s [%-11s]: %s", "File does exist", "skipping", server_path)
-                    move_queue.put( (dbx, entry.path_lower, move_to_path) )
+                    # MoveWorker thread move to COMPLETE_FOLDER
+                    logging.info(
+                        "%-25s [%-11s]: %s",
+                        "File does exist",
+                        "skipping",
+                        server_path
+                    )
+                    move_queue.put((dbx, entry.path_lower, move_to_path))
             elif isinstance(entry, dropbox.files.FolderMetadata):
                 dbx_path_list = entry.path_lower.strip('/').split('/')
 
-                # Check to see if entry is a directory just above flight CSV files
-                # If so, then we'll see if the path exists on the server
-                if (org_is_UND and len(dbx_path_list) == 4) or (not org_is_UND and len(dbx_path_list) == 3):
+                # Check to see if entry is a directory just above flight CSV
+                # files. If so, then we'll see if the path exists on the server
+                if (org_is_UND and len(dbx_path_list) == 4) or \
+                        (not org_is_UND and len(dbx_path_list) == 3):
                     if org_is_UND:
                         org, status, aircraft, n_number = dbx_path_list
                     else:
@@ -177,12 +222,21 @@ def main():
 
                     if not os.path.exists(full_path):
                         # Make directory on server since it doesn't exist
-                        logging.info("%-25s [%-11s]: %s", "Folder does not exist", "creating", full_path)
+                        logging.info(
+                            "%-25s [%-11s]: %s",
+                            "Folder does not exist",
+                            "creating",
+                            full_path
+                        )
                         os.makedirs(full_path)
                     else:
                         # Directory already exists, so do nothing
-                        logging.info("%-25s [%-11s]: %s", "Folder does exist", "skipping", full_path)
-            # end if/elif
+                        logging.info(
+                            "%-25s [%-11s]: %s",
+                            "Folder does exist",
+                            "skipping",
+                            full_path
+                        )
         # end for
 
         logging.info("[%s] Num entries found: %d", org, file_count)
@@ -191,33 +245,6 @@ def main():
     # Causes main thread to wait for the queues to be empty
     download_queue.join()
     move_queue.join()
-
-    # print move_list
-    # logging.info("Num to move: %d", len(move_list))
-    #
-    # job_id_list = []
-    #
-    # for i in xrange(0, len(move_list), 30):
-    #     job_id = dbx.files_move_batch(move_list[i:i + 30]).get_async_job_id()
-    #     logging.info("[Move Batch ID]: %s", job_id)
-    #     job_id_list.append(job_id)
-    #
-    # for j_id in job_id_list:
-    #     print "Job ID:", j_id
-    #     job_status = dbx.files_move_batch_check(j_id)
-    #
-    #     count = 0
-    #     while not (job_status.is_complete() or job_status.is_failed()):
-    #         time.sleep(2)
-    #         job_status = dbx.files_move_batch_check(job_id)
-    #         print "\tChecking again:", count
-    #         count += 1
-    #
-    #     if job_status.is_complete():
-    #         print "\tMove Batch Completed!"
-    #     elif job_status.is_failed():
-    #         print "\tMove Batch Failed:", job_status.get_failed()
-# end def main()
 
 
 @contextlib.contextmanager
@@ -228,10 +255,40 @@ def stopwatch(msg):
         yield
     finally:
         t1 = time.time()
+
     logging.info("Total elapsed time for %s: %.3f seconds", msg, t1 - t0)
-# end def stopwatch()
+
+
+def init_globals():
+    """
+    This function solely loads environment variables into the global variables.
+    Should be called after load_dotenv()
+    :return: void
+    :rtype: void
+    """
+    global SERVER_PREFIX
+    global slack
+
+    SERVER_PREFIX = os.environ.get('SERVER_PREFIX')
+
+    slack = Slack(os.environ.get('SLACK_WEBHOOK_URL'))
 
 
 if __name__ == "__main__":
-    with stopwatch('Syncing files/folders'):
-        main()
+    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+
+    if load_dotenv(dotenv_path):
+        init_globals()
+
+        with stopwatch('Syncing files/folders'):
+            main()
+    else:
+        # Need to log an error stating the .env file could not be loaded
+        attachment = {
+            "title":     'Could not load .env file',
+            'pretext':   '*%s*' % __file__,
+            'mrkdwn_in': ['pretext'],
+            'color':     '#ff0000'
+        }
+
+        slack.notify(attachments=[attachment])
