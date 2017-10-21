@@ -52,8 +52,9 @@ class DownloadWorker(Thread):
 
                 # Put the paths for moving after a successful download
                 self.move_queue.put((dbx_obj, move_from_path, move_to_path))
-            except dropbox.exceptions.ApiError, e:
-                logging.exception("Error in DownloadWorker: %s", e)
+            except (dropbox.exceptions.ApiError, IOError) as e:
+                logging.exception('Error in DownloadWorker: %s', e)
+                slack_log_error('Error in DownloadWorker', e)
             finally:
                 self.download_queue.task_done()
 
@@ -257,6 +258,7 @@ def stopwatch(msg):
         t1 = time.time()
 
     logging.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
+    slack_log_msg('Elapsed time for ' + msg, str(t1-t0))
 
 
 def init_globals():
@@ -274,6 +276,23 @@ def init_globals():
     slack = Slack(os.environ.get('SLACK_WEBHOOK_URL'))
 
 
+def slack_log_msg(title, description=None, author=__file__, color='#36a64f'):
+    attachment = {
+        "title":       title,
+        'author_name': author,
+        'color':       color
+    }
+
+    if description is not None:
+        attachment['text'] = description
+
+    slack.notify(attachments=[attachment])
+
+
+def slack_log_error(title, exception=None, author=__file__):
+    slack_log_msg(title, exception, author, '#ff0000')
+
+
 if __name__ == "__main__":
     dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 
@@ -281,14 +300,8 @@ if __name__ == "__main__":
         init_globals()
 
         with stopwatch('Syncing files/folders'):
+            slack_log_msg('Script started')
             main()
     else:
         # Need to log an error stating the .env file could not be loaded
-        attachment = {
-            "title":     'Could not load .env file',
-            'pretext':   '*%s*' % __file__,
-            'mrkdwn_in': ['pretext'],
-            'color':     '#ff0000'
-        }
-
-        slack.notify(attachments=[attachment])
+        slack_log_error('Could not load .env file')
