@@ -44,7 +44,7 @@ class DownloadWorker(Thread):
 
             try:
                 logging.info(
-                    "DownloadWorker: saving [%-50s] to [%-50s]",
+                    'DownloadWorker: saving [%-50s] to [%-50s]',
                     move_from_path,
                     server_path
                 )
@@ -70,13 +70,13 @@ class MoveWorker(Thread):
 
             try:
                 logging.info(
-                    "MoveWorker: from [%-50s] to [%-50s]",
+                    'MoveWorker: from [%-50s] to [%-50s]',
                     from_path,
                     to_path
                 )
                 dbx_obj.files_move(from_path, to_path, autorename=True)
             except dropbox.exceptions.ApiError, e:
-                logging.exception("Error in MoveWorker: %s", e)
+                logging.exception('Error in MoveWorker: %s', e)
             finally:
                 self.queue.task_done()
 
@@ -101,7 +101,7 @@ def get_pending_files(dbx_obj, org, org_is_UND):
             entries.extend(result.entries)
     except dropbox.exceptions.ApiError, e:
         logging.exception(
-            "[%s] Error while calling Dropbox.files_list_folder: %s",
+            '[%s] Error while calling Dropbox.files_list_folder: %s',
             org,
             e
         )
@@ -187,9 +187,9 @@ def main():
                     # it doesn't exist, DownloadWorker thread will download file
                     # from Dropbox to server
                     logging.info(
-                        "%-25s [%-11s]: %s",
-                        "File does not exist",
-                        "queueing",
+                        '%-25s [%-11s]: %s',
+                        'File does not exist',
+                        'queueing',
                         server_path
                     )
                     download_queue.put(
@@ -199,9 +199,9 @@ def main():
                     # File already exists, so put in move_queue and have
                     # MoveWorker thread move to COMPLETE_FOLDER
                     logging.info(
-                        "%-25s [%-11s]: %s",
-                        "File does exist",
-                        "skipping",
+                        '%-25s [%-11s]: %s',
+                        'File does exist',
+                        'skipping',
                         server_path
                     )
                     move_queue.put((dbx, entry.path_lower, move_to_path))
@@ -223,23 +223,23 @@ def main():
                     if not os.path.exists(full_path):
                         # Make directory on server since it doesn't exist
                         logging.info(
-                            "%-25s [%-11s]: %s",
-                            "Folder does not exist",
-                            "creating",
+                            '%-25s [%-11s]: %s',
+                            'Folder does not exist',
+                            'creating',
                             full_path
                         )
                         os.makedirs(full_path)
                     else:
                         # Directory already exists, so do nothing
                         logging.info(
-                            "%-25s [%-11s]: %s",
-                            "Folder does exist",
-                            "skipping",
+                            '%-25s [%-11s]: %s',
+                            'Folder does exist',
+                            'skipping',
                             full_path
                         )
         # end for
 
-        logging.info("[%s] Num entries found: %d", org, file_count)
+        logging.info('[%s] Num entries found: %d', org, file_count)
     # end for
 
     # Causes main thread to wait for the queues to be empty
@@ -256,7 +256,7 @@ def stopwatch(msg):
     finally:
         t1 = time.time()
 
-    logging.info("Total elapsed time for %s: %.3f seconds", msg, t1 - t0)
+    logging.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
 
 
 def init_globals():
