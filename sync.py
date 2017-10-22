@@ -78,6 +78,7 @@ class MoveWorker(Thread):
                 dbx_obj.files_move(from_path, to_path, autorename=True)
             except dropbox.exceptions.ApiError, e:
                 logging.exception('Error in MoveWorker: %s', e)
+                slack_log_error('Error in MoveWorker', e)
             finally:
                 self.queue.task_done()
 
@@ -106,6 +107,7 @@ def get_pending_files(dbx_obj, org, org_is_UND):
             org,
             e
         )
+        slack_log_error('Error while calling Dropbox.files_list_folder', e)
 
     return entries
 
@@ -258,7 +260,7 @@ def stopwatch(msg):
         t1 = time.time()
 
     logging.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
-    slack_log_msg('Elapsed time for ' + msg, str(t1 - t0))
+    slack_log_msg('Elapsed time for ' + msg, '%.3f seconds' % (t1 - t0))
 
 
 def init_globals():
@@ -278,13 +280,13 @@ def init_globals():
 
 def slack_log_msg(title, description=None, author=__file__, color='#36a64f'):
     attachment = {
-        "title":       title,
-        'author_name': author,
-        'color':       color
+        "title":       str(title),
+        'author_name': str(author),
+        'color':       str(color)
     }
 
     if description is not None:
-        attachment['text'] = description
+        attachment['text'] = str(description)
 
     slack.notify(attachments=[attachment])
 
@@ -296,12 +298,16 @@ def slack_log_error(title, exception=None, author=__file__):
 if __name__ == "__main__":
     dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 
-    if load_dotenv(dotenv_path):
-        init_globals()
+    try:
+        if load_dotenv(dotenv_path):
+            init_globals()
 
-        with stopwatch('Syncing files/folders'):
-            slack_log_msg('Script started')
-            main()
-    else:
-        # Need to log an error stating the .env file could not be loaded
-        slack_log_error('Could not load .env file')
+            with stopwatch('Syncing files/folders'):
+                slack_log_msg('Script started')
+                main()
+        else:
+            # Need to log an error stating the .env file could not be loaded
+            slack_log_error('Could not load .env file')
+    except Exception as e:
+        logging.exception('Script crashed while executing: %s', e)
+        slack_log_error('Script crashed while executing', e)
