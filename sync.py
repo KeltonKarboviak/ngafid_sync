@@ -217,6 +217,7 @@ def main():
                         not org_is_UND and len(dbx_path_list) == 3):
                     if org_is_UND:
                         org, status, aircraft, n_number = dbx_path_list
+                        org = org.upper()
                     else:
                         status, aircraft, n_number = dbx_path_list
 
