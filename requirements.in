@@ -1,0 +1,5 @@
+# requirements.in
+dropbox
+pip-tools
+python-dotenv
+slackweb
