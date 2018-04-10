@@ -1,21 +1,14 @@
 import os
 
-from dotenv import load_dotenv
 from fabric.api import *
-from slackweb import Slack
 
-
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(dotenv_path)
-
-slack = Slack(os.environ.get('SLACK_WEBHOOK_URL'))
 
 env.use_ssh_config = True
 env.hosts = ['deploy-fdm-server']
 env.directory = '/home/fdm/sync'
 env.venv_directory = 'venv'
 env.activate = 'source ' + os.path.join(env.directory, env.venv_directory, 'bin/activate')
-env.repo = 'https://www.github.com/KeltonKarboviak/NGAFID_Sync.git'
+env.repo = 'https://github.com/KeltonKarboviak/ngafid_sync.git'
 
 
 @task(default=True)

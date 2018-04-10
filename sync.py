@@ -76,7 +76,7 @@ class MoveWorker(Thread):
                     to_path
                 )
                 dbx_obj.files_move(from_path, to_path, autorename=True)
-            except dropbox.exceptions.ApiError, e:
+            except dropbox.exceptions.ApiError as e:
                 logging.exception('Error in MoveWorker: %s', e)
                 slack_log_error('Error in MoveWorker', e)
             finally:
@@ -101,7 +101,7 @@ def get_pending_files(dbx_obj, org, org_is_UND):
         while result.has_more:
             result = dbx_obj.files_list_folder_continue(result.cursor)
             entries.extend(result.entries)
-    except dropbox.exceptions.ApiError, e:
+    except dropbox.exceptions.ApiError as e:
         logging.exception(
             '[%s] Error while calling Dropbox.files_list_folder: %s',
             org,
@@ -281,9 +281,9 @@ def init_globals():
 
 def slack_log_msg(title, description=None, author=__file__, color='#36a64f'):
     attachment = {
-        "title":       str(title),
+        "title": str(title),
         'author_name': str(author),
-        'color':       str(color)
+        'color': str(color)
     }
 
     if description is not None:
