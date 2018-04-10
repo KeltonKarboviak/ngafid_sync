@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import contextlib
 import json
 import logging
 import os
 import time
-from Queue import Queue
+from queue import Queue
 from threading import Thread
 
 import dropbox
@@ -136,7 +136,7 @@ def main():
     for org, token in org_data.items():
         dbx = dropbox.Dropbox(token)
 
-        org_is_UND = org in ['UND-GFK', 'UND-IWA', 'UND-CKN']
+        org_is_UND = org.startswith('UND')
 
         entries = get_pending_files(dbx, org, org_is_UND)
         file_count = 0
