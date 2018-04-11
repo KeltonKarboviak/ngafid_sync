@@ -14,7 +14,7 @@ env.repo = 'https://github.com/KeltonKarboviak/ngafid_sync.git'
 @task(default=True)
 def deploy():
     pull_changes()
-    run_pip()
+    run_pipenv()
     update_permissions()
 
 
@@ -23,9 +23,9 @@ def pull_changes():
         run('git pull')
 
 
-def run_pip():
-    with cd(env.directory), prefix(env.activate):
-        run('pip install -r requirements.txt')
+def run_pipenv():
+    with cd(env.directory):
+        run('pipenv install --deploy')
 
 
 def update_permissions():
