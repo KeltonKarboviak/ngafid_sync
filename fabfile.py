@@ -1,13 +1,11 @@
-import os
+# -*- coding: utf-8 -*-
 
-from fabric.api import *
+from fabric.api import cd, env, run, task
 
 
 env.use_ssh_config = True
 env.hosts = ['deploy-fdm-server']
 env.directory = '/home/fdm/sync'
-env.venv_directory = 'venv'
-env.activate = 'source ' + os.path.join(env.directory, env.venv_directory, 'bin/activate')
 env.repo = 'https://github.com/KeltonKarboviak/ngafid_sync.git'
 
 
@@ -25,6 +23,7 @@ def pull_changes():
 
 def run_pipenv():
     with cd(env.directory):
+        run('pipenv clean')
         run('pipenv install --deploy')
 
 
