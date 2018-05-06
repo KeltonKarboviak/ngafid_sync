@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import contextlib
 import json
@@ -14,13 +15,10 @@ from slackweb import Slack
 
 
 logging.basicConfig(
-    filename='logs/' + time.strftime('%Y_%m_%d') + '.log',
+    filename=os.path.join('logs', 'sync.log.' + time.strftime('%Y-%m-%d')),
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logging.getLogger('dropbox').setLevel(logging.CRITICAL)
-logging.getLogger('requests').setLevel(logging.CRITICAL)
-logging.getLogger('urllib3').setLevel(logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 SERVER_PREFIX = ''
@@ -43,7 +41,7 @@ class DownloadWorker(Thread):
                 self.download_queue.get()
 
             try:
-                logging.info(
+                logger.info(
                     'DownloadWorker: saving [%-50s] to [%-50s]',
                     move_from_path,
                     server_path
@@ -53,7 +51,7 @@ class DownloadWorker(Thread):
                 # Put the paths for moving after a successful download
                 self.move_queue.put((dbx_obj, move_from_path, move_to_path))
             except (dropbox.exceptions.ApiError, IOError) as e:
-                logging.exception('Error in DownloadWorker: %s', e)
+                logger.exception('Error in DownloadWorker: %s', e)
                 slack_log_error('Error in DownloadWorker', e)
             finally:
                 self.download_queue.task_done()
@@ -70,14 +68,14 @@ class MoveWorker(Thread):
             dbx_obj, from_path, to_path = self.queue.get()
 
             try:
-                logging.info(
+                logger.info(
                     'MoveWorker: from [%-50s] to [%-50s]',
                     from_path,
                     to_path
                 )
                 dbx_obj.files_move(from_path, to_path, autorename=True)
             except dropbox.exceptions.ApiError as e:
-                logging.exception('Error in MoveWorker: %s', e)
+                logger.exception('Error in MoveWorker: %s', e)
                 slack_log_error('Error in MoveWorker', e)
             finally:
                 self.queue.task_done()
@@ -102,7 +100,7 @@ def get_pending_files(dbx_obj, org, org_is_UND):
             result = dbx_obj.files_list_folder_continue(result.cursor)
             entries.extend(result.entries)
     except dropbox.exceptions.ApiError as e:
-        logging.exception(
+        logger.exception(
             '[%s] Error while calling Dropbox.files_list_folder: %s',
             org,
             e
@@ -189,7 +187,7 @@ def main():
                     # Put a download path into download_queue as a tuple since
                     # it doesn't exist, DownloadWorker thread will download file
                     # from Dropbox to server
-                    logging.info(
+                    logger.info(
                         '%-25s [%-11s]: %s',
                         'File does not exist',
                         'queueing',
@@ -201,7 +199,7 @@ def main():
                 else:
                     # File already exists, so put in move_queue and have
                     # MoveWorker thread move to COMPLETE_FOLDER
-                    logging.info(
+                    logger.info(
                         '%-25s [%-11s]: %s',
                         'File does exist',
                         'skipping',
@@ -226,7 +224,7 @@ def main():
 
                     if not os.path.exists(full_path):
                         # Make directory on server since it doesn't exist
-                        logging.info(
+                        logger.info(
                             '%-25s [%-11s]: %s',
                             'Folder does not exist',
                             'creating',
@@ -235,7 +233,7 @@ def main():
                         os.makedirs(full_path)
                     else:
                         # Directory already exists, so do nothing
-                        logging.info(
+                        logger.info(
                             '%-25s [%-11s]: %s',
                             'Folder does exist',
                             'skipping',
@@ -243,7 +241,7 @@ def main():
                         )
         # end for
 
-        logging.info('[%s] Num entries found: %d', org, file_count)
+        logger.info('[%s] Num entries found: %d', org, file_count)
     # end for
 
     # Causes main thread to wait for the queues to be empty
@@ -260,7 +258,7 @@ def stopwatch(msg):
     finally:
         t1 = time.time()
 
-    logging.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
+    logger.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
     slack_log_msg('Elapsed time for ' + msg, '%.3f seconds' % (t1 - t0))
 
 
@@ -309,6 +307,6 @@ if __name__ == "__main__":
         else:
             # Need to log an error stating the .env file could not be loaded
             slack_log_error('Could not load .env file')
-    except Exception as e:
-        logging.exception('Script crashed while executing: %s', e)
-        slack_log_error('Script crashed while executing', e)
+    except Exception as exc:
+        logger.exception('Script crashed while executing: %s', exc)
+        slack_log_error('Script crashed while executing', exc)
