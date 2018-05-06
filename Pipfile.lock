@@ -18,10 +18,10 @@
     "default": {
         "certifi": {
             "hashes": [
-                "sha256:14131608ad2fd56836d33a71ee60fa1c82bc9d2c8d98b7bdbc631fe1b3cd1296",
-                "sha256:edbc3f203427eef571f79a7692bb160a2b0f7ccaa31953e99bd17e307cf63f7d"
+                "sha256:13e698f54293db9f89122b0581843a782ad0934a4fe0172d2a980ba77fc61bb7",
+                "sha256:9fa520c1bacfb634fa7af20a76bcbd3d5fb390481724c597da32c719a7dca4b0"
             ],
-            "version": "==2018.1.18"
+            "version": "==2018.4.16"
         },
         "chardet": {
             "hashes": [
@@ -39,12 +39,12 @@
         },
         "dropbox": {
             "hashes": [
-                "sha256:019f1529631d335f2b57ffd65a4545406bd3d139d0a9611cb6ca8c66c4ae7309",
-                "sha256:2ac952428ec9351bb061c499610c5569aa372770fbaeb47b4c31656e3fabf825",
-                "sha256:60f8846f4249a74c4dd8d5d960d9ca88ac42ddac5bdf150c7505eea7d0e23557"
+                "sha256:49f52a02af4127ed19c31a7c8ecaeaf505d97b1444ca880a9afc2c2561d020f8",
+                "sha256:6c115ac5aa17a5bf43172617d992c89615e6639a6533e9b4cb8b8f26c69220a9",
+                "sha256:df24cf229967830d505f8c9c48f90c8ab96322ae04a3da1a56ebba7ffe2e3295"
             ],
             "index": "pypi",
-            "version": "==8.7.1"
+            "version": "==8.8.1"
         },
         "idna": {
             "hashes": [
@@ -162,6 +162,7 @@
                 "sha256:edabd457cd23a02965166026fd9bfd196f4324fe6032e866d0f3bd0301cd486f",
                 "sha256:fdf1c1dc5bafc32bc5d08b054f94d659422b05aba244d6be4ddc1c72d9aa70fb"
             ],
+            "markers": "platform_python_implementation != 'PyPy'",
             "version": "==1.11.5"
         },
         "cryptography": {
