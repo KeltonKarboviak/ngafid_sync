@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import contextlib
 import json
 import logging.config
 import os
-import time
 from pathlib import Path
 from queue import Queue
 from threading import Thread
@@ -253,22 +251,8 @@ def main():
     move_queue.join()
 
 
-@contextlib.contextmanager
-def stopwatch(msg):
-    """Context manager to print how long a block of code ran."""
-    t0 = time.time()
-    try:
-        yield
-    finally:
-        t1 = time.time()
-
-    logger.info('Total elapsed time for %s: %.3f seconds', msg, t1 - t0)
-
-
 if __name__ == "__main__":
     try:
-        with stopwatch('Syncing files/folders'):
-            logger.info('Script started')
-            main()
+        main()
     except Exception as exc:
         logger.exception('Script crashed while executing: %s', exc)
