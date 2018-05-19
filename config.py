@@ -6,8 +6,7 @@ import pathlib
 import time
 
 from dotenv import load_dotenv
-
-from logging_utils import SlackWebhookFormatter, SlackWebhookHandler
+from slack_log_utils import SlackWebhookFormatter, SlackWebhookHandler
 
 
 dotenv_path = pathlib.Path(pathlib.Path(__file__).parent, '.env')

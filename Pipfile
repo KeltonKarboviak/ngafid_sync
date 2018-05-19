@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 dropbox = ">=8.4.0,<9.0"
 python-dotenv = ">=0.7.1,<0.8"
-requests = ">=2.18.4,<2.19"
+slack-log-utils = "*"
 
 [dev-packages]
 "Fabric3" = ">=1.14,<2.0"
