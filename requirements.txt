@@ -7,4 +7,5 @@ idna==2.6
 python-dotenv==0.7.1
 requests==2.18.4
 six==1.11.0
+slack-log-utils==0.1.5
 urllib3==1.22
