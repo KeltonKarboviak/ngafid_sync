@@ -32,7 +32,9 @@ logging_config = {
             'class': 'logging.FileHandler',
             'formatter': 'default',
             'level': logging.DEBUG,
-            'filename': pathlib.Path(LOG_PATH, f'sync.log.{time.strftime("%Y-%m-%d")}')
+            'filename': pathlib.Path(
+                LOG_PATH, f'sync.log.{time.strftime("%Y-%m-%d")}'
+            )
         },
         'slack': {
             '()': SlackWebhookHandler,
