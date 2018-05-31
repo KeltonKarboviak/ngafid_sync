@@ -121,7 +121,7 @@ def process_file_entry(
     if org.is_und_org:
         # UND's dropbox has 3 separate sub-locations: UND-GFK,
         # UND-IWA, UND-CKN these are a special case
-        _, status, aircraft, n_number, flight_file = dbx_path_list
+        _, status, aircraft, recorder, n_number, flight_file = dbx_path_list
 
         # Get the path for moving the file on Dropbox
         move_to_path = DBX_PATH_SEP.join([
@@ -129,30 +129,35 @@ def process_file_entry(
             org.name,
             COMPLETE_FOLDER,
             aircraft,
+            recorder,
             n_number,
             flight_file,
         ])
     else:
-        status, aircraft, n_number, flight_file = dbx_path_list
+        status, aircraft, recorder, n_number, flight_file = dbx_path_list
 
         # Get the path for moving the file on Dropbox
         move_to_path = DBX_PATH_SEP.join([
             '',
             COMPLETE_FOLDER,
             aircraft,
+            recorder,
             n_number,
             flight_file,
         ])
 
-    aircraft, n_number = aircraft.upper(), n_number.upper()
+    aircraft, recorder, n_number = (
+        aircraft.upper(), recorder.upper(), n_number.upper(),
+    )
 
     # Get the path on the server for downloading
     server_path = Path(
         SERVER_PREFIX,
         org.name,
         aircraft,
+        recorder,
         n_number,
-        flight_file
+        flight_file,
     )
 
     if not server_path.exists():
