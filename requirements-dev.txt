@@ -1,12 +1,9 @@
--i https://pypi.python.org/simple
-asn1crypto==0.24.0
-bcrypt==3.1.4
-cffi==1.11.5; platform_python_implementation != 'PyPy'
-cryptography==2.2.2
+-i https://pypi.python.org/simple/
+bcrypt==3.2.0
+cffi==1.14.5
+cryptography==3.4.7
 fabric3==1.14.post1
-idna==2.6
-paramiko==2.4.1
-pyasn1==0.4.3
-pycparser==2.18
-pynacl==1.2.1
-six==1.11.0
+paramiko==2.7.2
+pycparser==2.20
+pynacl==1.4.0
+six==1.16.0
